@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jogo da Memória - Técnico em Informática</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background-color: #161b22;
+            border: 2px solid #30363d;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #58a6ff;
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        p.subtitle {
+            font-size: 0.85rem;
+            color: #8b949e;
+            margin-bottom: 15px;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            background-color: #0d1117;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #30363d;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .moves span { color: #58a6ff; }
+        .timer span { color: #f85149; }
+
+        /* Grid do Jogo da Memória (4x4) */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            perspective: 1000px;
+        }
+
+        .card {
+            aspect-ratio: 1 / 1;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 2px solid #30363d;
+        }
+
+        .card-front {
+            background-color: #21262d;
+            color: #58a6ff;
+            font-size: 1.5rem;
+        }
+
+        .card-back {
+            background-color: #30363d;
+            transform: rotateY(180deg);
+            font-size: 2rem;
+        }
+
+        .card.matched .card-back {
+            border-color: #3fb950;
+            background-color: rgba(63, 185, 80, 0.15);
+            animation: matchPop 0.3s ease-out;
+        }
+
+        @keyframes matchPop {
+            0% { transform: rotateY(180deg) scale(1); }
+            50% { transform: rotateY(180deg) scale(1.1); }
+            100% { transform: rotateY(180deg) scale(1); }
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: #238636;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover { background-color: #2ea043; }
+        .btn:disabled { background-color: #30363d; color: #8b949e; cursor: not-allowed; }
+
+        #end-screen {
+            display: none;
+        }
+
+        .final-score {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #58a6ff;
+            margin: 15px 0;
+        }
+
+        .rank-msg {
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #0d1117;
+            border-radius: 8px;
+            border-left: 4px solid #58a6ff;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .qrcode-panel {
+            width: 100%;
+            max-width: 420px;
+            background-color: #161b22;
+            border: 2px dashed #30363d;
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .qrcode-panel h2 {
+            font-size: 1.1rem;
+            color: #58a6ff;
+            margin-bottom: 10px;
+        }
+
+        .qrcode-input {
+            width: 100%;
+            padding: 10px;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #c9d1d9;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .qrcode-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 12px;
+            border-radius: 8px;
+            width: 154px;
+            height: 154px;
+            margin: 10px auto;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+    <div class="container" id="game-screen">
+        <h1>🧠 Memória Tech</h1>
+        <p class="subtitle">Feira de Profissões - Técnico em Informática</p>
+
+        <div class="hud">
+            <div class="moves">Tentativas: <span id="moves">0</span></div>
+            <div class="timer">Tempo: <span id="time">60</span>s</div>
+        </div>
+
+        <div class="grid" id="grid"></div>
+
+        <button class="btn" id="start-btn" onclick="startGame()">INICIAR SISTEMA</button>
+    </div>
+
+    <div class="container" id="end-screen">
+        <h1>Relatório de Diagnóstico</h1>
+        <p class="subtitle">Mapeamento de memória concluído!</p>
+        
+        <div class="final-score" id="final-stats">0 tentativas em 0s</div>
+        <div class="rank-msg" id="rank-msg">Analisando aptidão tecnológica...</div>
+
+        <button class="btn" onclick="resetGame()">REINICIAR BANCO</button>
+    </div>
+
+    <div class="qrcode-panel">
+        <h2>📢 Compartilhar na Tela do Stand</h2>
+        <input type="text" class="qrcode-input" id="qr-url-input" placeholder="Cole o link do jogo aqui para os visitantes" oninput="generateQRCode(this.value)">
+        <div class="qrcode-container" id="qrcode"></div>
+        <p style="font-size: 0.75rem; color: #8b949e; margin-top: 5px;">Os visitantes podem escanear para jogar em seus próprios celulares!</p>
+    </div>
+
+    <script>
+        const gridEl = document.getElementById('grid');
+        const movesEl = document.getElementById('moves');
+        const timeEl = document.getElementById('time');
+        const startBtn = document.getElementById('start-btn');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+        const finalStatsEl = document.getElementById('final-stats');
+        const rankMsgEl = document.getElementById('rank-msg');
+        const qrContainer = document.getElementById('qrcode');
+
+        let moves = 0;
+        let timeLeft = 60;
+        let gameTimer;
+        let isPlaying = false;
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let qrCodeInstance = null;
+        let audioCtx = null;
+
+        const techItems = [
+            { icon: '💻', label: 'Hardware' },
+            { icon: '🌐', label: 'Redes' },
+            { icon: '💾', label: 'Backup' },
+            { icon: '🔒', label: 'Segurança' },
+            { icon: '🐛', label: 'Bug' },
+            { icon: '☁️', label: 'Nuvem' },
+            { icon: '🔌', label: 'Infra' },
+            { icon: '🤖', label: 'I.A.' }
+        ];
+
+        let cardsData = [...techItems, ...techItems];
+
+        function playSound(frequency, type, duration) {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.type = type;
+                oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+                
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                console.log("AudioContext não suportado ou bloqueado pelo navegador.");
+            }
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createGrid() {
+            gridEl.innerHTML = '';
+            shuffle(cardsData);
+            
+            cardsData.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.index = index;
+                card.dataset.id = item.label;
+
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">💾</div>
+                        <div class="card-back">${item.icon}</div>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => flipCard(card));
+                gridEl.appendChild(card);
+            });
+        }
+
+        function startGame() {
+            if (isPlaying) return;
+            isPlaying = true;
+            moves = 0;
+            timeLeft = 60;
+            matchedPairs = 0;
+            flippedCards = [];
+            
+            movesEl.textContent = moves;
+            timeEl.textContent = timeLeft;
+            startBtn.disabled = true;
+            startBtn.textContent = 'CONEXÃO ATIVA';
+
+            createGrid();
+
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                timeEl.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+
+        function flipCard(card) {
+            if (!isPlaying || card.classList.contains('flipped') || card.classList.contains('matched') || flippedCards.length >= 2) {
+                return;
+            }
+
+            playSound(400, 'sine', 0.08);
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                movesEl.textContent = moves;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.dataset.id === card2.dataset.id;
+
+            if (isMatch) {
+                setTimeout(() => {
+                    playSound(650, 'sine', 0.15);
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    matchedPairs++;
+                    flippedCards = [];
+
+                    if (matchedPairs === techItems.length) {
+                        endGame(true);
+                    }
+                }, 300);
+            } else {
+                setTimeout(() => {
+                    playSound(200, 'triangle', 0.2);
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                }, 900);
+            }
+        }
+
+        function endGame(won) {
+            isPlaying = false;
+            clearInterval(gameTimer);
+
+            setTimeout(() => {
+                gameScreen.style.display = 'none';
+                endScreen.style.display = 'block';
+                
+                const timeSpent = 60 - timeLeft;
+                finalStatsEl.textContent = `${moves} tentativas em ${timeSpent}s`;
+
+                let rankMessage = '';
+                if (!won) {
+                    rankMessage = "❌ <strong>Estouro de Buffer:</strong> O tempo limite do sistema expirou antes de mapear toda a memória. Pratique um pouco mais de organização de dados!";
+                } else if (moves <= 12) {
+                    rankMessage = "🚀 <strong>Arquiteto de Sistemas:</strong> Extraordinário! Mapeamento impecável com pouquíssimas falhas de cache. Você possui uma excelente lógica estrutural para TI!";
+                } else if (moves > 12 && moves <= 18) {
+                    rankMessage = "🛡️ <strong>Administrador de Banco de Dados:</strong> Ótimo gerenciamento de indexação. Encontrou as relações de forma rápida e eficiente.";
+                } else {
+                    rankMessage = "👨‍💻 <strong>Suporte Técnico Júnior:</strong> Varredura finalizada! Conseguiu indexar os componentes, mas gerou um overhead de tentativas. Bom para treinar a atenção técnica!";
+                }
+
+                rankMsgEl.innerHTML = rankMessage;
+            }, 600);
+        }
+
+        function resetGame() {
+            endScreen.style.display = 'none';
+            gameScreen.style.display = 'block';
+            startBtn.disabled = false;
+            startBtn.textContent = 'INICIAR SISTEMA';
+            moves = 0;
+            timeLeft = 60;
+            movesEl.textContent = moves;
+            timeEl.textContent = timeLeft;
+            createGrid();
+        }
+
+        function generateQRCode(text) {
+            const dataToEncode = text.trim() || "https://github.com";
+            
+            try {
+                if (!qrCodeInstance) {
+                    qrCodeInstance = new QRCode(qrContainer, {
+                        text: dataToEncode,
+                        width: 130,
+                        height: 130,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } else {
+                    qrCodeInstance.clear();
+                    qrCodeInstance.makeCode(dataToEncode);
+                }
+            } catch (e) {
+                console.error("Erro na geração do QR Code:", e);
+            }
+        }
+
+        // Inicialização com verificação de estado do documento para evitar falhas em abas de visualização
+        createGrid();
+        if (document.readyState === 'loading') {
+            window.addEventListener('load', () => generateQRCode("https://github.com"));
+        } else {
+            generateQRCode("https://github.com");
+        }
+    </script>
+</body>
+</html>
